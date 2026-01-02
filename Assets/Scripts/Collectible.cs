@@ -2,49 +2,35 @@ using UnityEngine;
 
 public class Collectible : MonoBehaviour
 {
-    public static int collectiblesCollected = 0;
-    public static int totalCollectibles = 0;
-
     private void Start()
     {
-        totalCollectibles++;
-        Debug.Log($"[Collectible] Spawned: {gameObject.name}. Total collectibles now = {totalCollectibles}");
+        // 1. Tell LevelManager "I exist, add me to the total count."
+        if (LevelManager.Instance != null)
+        {
+            LevelManager.Instance.RegisterObjective();
+        }
+        else
+        {
+            Debug.LogWarning("[Collectible] LevelManager not found! Make sure it's in the scene.");
+        }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        Debug.Log($"[Collectible] Trigger entered by {other.name}");
-
         if (other.CompareTag("Player"))
         {
-            collectiblesCollected++;
-            Debug.Log($"[Collectible] Collected by Player! {collectiblesCollected}/{totalCollectibles}");
-
-            // Update UI
-            if (UIManager.Instance != null)
-                UIManager.Instance.UpdateCollectibleUI(collectiblesCollected, totalCollectibles);
-            else
-                Debug.LogWarning("[Collectible] UIManager not found!");
-
-            // Destroy collectible object
-            Destroy(gameObject);
-
-            // Check win condition (Level 1 only)
-            if (collectiblesCollected >= totalCollectibles)
+            // 2. Tell LevelManager "I was collected."
+            if (LevelManager.Instance != null)
             {
-                Debug.Log("[Collectible] All collectibles obtained! Notifying LevelManager...");
-                if (LevelManager.Instance != null)
-                    LevelManager.Instance.CompleteLevel();
-                else
-                    Debug.LogWarning("[Collectible] LevelManager not found!");
+                LevelManager.Instance.CollectObjective();
             }
-        }
-    }
 
-    public static void ResetCounters()
-    {
-        collectiblesCollected = 0;
-        totalCollectibles = 0;
-        Debug.Log("[Collectible] Counters reset.");
+            // 3. Play Sound (Optional, since LevelManager handles coin sound too)
+            // if (AudioManager.Instance != null) 
+            //    AudioManager.Instance.PlaySFX(AudioManager.Instance.coinPickup);
+
+            // 4. Destroy this object
+            Destroy(gameObject);
+        }
     }
 }

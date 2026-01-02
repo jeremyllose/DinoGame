@@ -6,8 +6,8 @@ public class UIManager : MonoBehaviour
     public static UIManager Instance { get; private set; }
 
     [Header("UI References")]
-    public TextMeshProUGUI collectibleText;   // TMP text for collectibles
-    public TextMeshProUGUI missionText;       // TMP text for mission description
+    public TextMeshProUGUI collectibleText;   
+    public TextMeshProUGUI missionText;       
 
     private void Awake()
     {
@@ -19,24 +19,16 @@ public class UIManager : MonoBehaviour
 
     private void Start()
     {
-        // Initialize mission text at start
-        if (missionText != null && LevelManager.Instance != null)
-            missionText.text = LevelManager.Instance.GetMissionText(LevelManager.Instance.currentLevel + 1);
-
-        // Initialize collectible UI at start
-        UpdateCollectibleUI(Collectible.collectiblesCollected, Collectible.totalCollectibles);
+        // ERROR FIXED: We removed the code that tried to read Collectible.totalCollectibles.
+        // The LevelManager now handles updating the UI automatically when the level begins.
     }
 
+    // This is still here if you need it, but LevelManager mostly uses UpdateMissionText now
     public void UpdateCollectibleUI(int collected, int total)
     {
         if (collectibleText != null)
         {
             collectibleText.text = $"Collectibles: {collected}/{total}";
-            Debug.Log($"[UIManager] Updated UI -> {collected}/{total}");
-        }
-        else
-        {
-            Debug.LogWarning("[UIManager] Collectible Text not assigned!");
         }
     }
 
@@ -45,11 +37,6 @@ public class UIManager : MonoBehaviour
         if (missionText != null)
         {
             missionText.text = mission;
-            Debug.Log($"[UIManager] Mission updated -> {mission}");
-        }
-        else
-        {
-            Debug.LogWarning("[UIManager] Mission Text not assigned!");
         }
     }
 }

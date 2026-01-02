@@ -25,6 +25,11 @@ namespace StarterAssets
         public float JumpTimeout = 0.1f;
         public float FallTimeout = 0.15f;
 
+        [Header("Flying Settings")]
+        public bool IsFlying = false;
+        public float FlyGravity = -10.0f;   
+        public float FlyUpSpeed = 5.0f;     
+
         [Header("Player Grounded Check")]
         public bool Grounded = true;
         public float GroundedOffset = -0.14f;
@@ -36,13 +41,12 @@ namespace StarterAssets
         public float TopClamp = 90.0f;
         public float BottomClamp = -90.0f;
 
-        // Private
+        // Private variables
         private float _cinemachineTargetPitch;
         private float _speed;
         private float _rotationVelocity;
         private float _verticalVelocity;
         private float _terminalVelocity = 53.0f;
-
         private float _jumpTimeoutDelta;
         private float _fallTimeoutDelta;
 
@@ -52,10 +56,7 @@ namespace StarterAssets
         private CharacterController _controller;
         private StarterAssetsInputs _input;
         private GameObject _mainCamera;
-
-        // Animator reference
         private Animator _animator;
-
         private const float _threshold = 0.01f;
 
         private bool IsCurrentDeviceMouse
@@ -85,10 +86,13 @@ namespace StarterAssets
 #if ENABLE_INPUT_SYSTEM
             _playerInput = GetComponent<PlayerInput>();
 #endif
-            _animator = GetComponentInChildren<Animator>();
-
             _jumpTimeoutDelta = JumpTimeout;
             _fallTimeoutDelta = FallTimeout;
+        }
+
+        public void UpdateAnimatorReference()
+        {
+            _animator = GetComponentInChildren<Animator>();
         }
 
         private void Update()
@@ -96,7 +100,7 @@ namespace StarterAssets
             GroundedCheck();
             JumpAndGravity();
             Move();
-            HandleAttack(); // 👈 added attack logic
+            HandleAttack();
         }
 
         private void LateUpdate()
@@ -132,7 +136,6 @@ namespace StarterAssets
             if (_input.move == Vector2.zero) targetSpeed = 0.0f;
 
             float currentHorizontalSpeed = new Vector3(_controller.velocity.x, 0.0f, _controller.velocity.z).magnitude;
-
             float speedOffset = 0.1f;
             float inputMagnitude = _input.analogMovement ? _input.move.magnitude : 1f;
 
@@ -147,7 +150,6 @@ namespace StarterAssets
             }
 
             Vector3 inputDirection = new Vector3(_input.move.x, 0.0f, _input.move.y).normalized;
-
             if (_input.move != Vector2.zero)
             {
                 inputDirection = transform.right * _input.move.x + transform.forward * _input.move.y;
@@ -155,71 +157,91 @@ namespace StarterAssets
 
             _controller.Move(inputDirection.normalized * (_speed * Time.deltaTime) + new Vector3(0.0f, _verticalVelocity, 0.0f) * Time.deltaTime);
 
-            // Animation updates
             if (_animator != null)
             {
-                // Smooth speed parameter
                 _animator.SetFloat("Speed", _speed, 0.1f, Time.deltaTime);
-
-                // Prevent flicker between idle and walk
-                bool moving = _speed > 0.25f; // slightly higher threshold
+                bool moving = _speed > 0.25f;
                 _animator.SetBool("isRunning", moving);
             }
         }
 
         private void JumpAndGravity()
         {
-            if (Grounded)
+            // ==========================================
+            // FLYING MODE (Direct Input Check)
+            // ==========================================
+            if (IsFlying)
             {
                 _fallTimeoutDelta = FallTimeout;
+                
+                // IMPORTANT: We check KeyCode.Space directly to avoid the "stuck" variable issue
+                bool isHoldingSpace = Input.GetKey(KeyCode.Space);
 
-                // Small downward force to stay grounded
-                if (_verticalVelocity < 0.0f)
-                    _verticalVelocity = -2f;
-
-                // If just pressed jump
-                if (_input.jump && _jumpTimeoutDelta <= 0.0f)
+                if (isHoldingSpace) 
                 {
-                    _verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);
-                    _animator.SetBool("isJumping", true);
+                    // GO UP
+                    _verticalVelocity = Mathf.MoveTowards(_verticalVelocity, FlyUpSpeed, Time.deltaTime * 10f);
+                }
+                else 
+                {
+                    // BUTTON RELEASED
+                    
+                    // 1. Instant Momentum Kill: If going up, STOP going up immediately.
+                    if (_verticalVelocity > 0)
+                    {
+                        _verticalVelocity = 0f; 
+                    }
+
+                    // 2. Fall Down
+                    if (_verticalVelocity < _terminalVelocity)
+                    {
+                        _verticalVelocity += FlyGravity * Time.deltaTime;
+                    }
+                }
+                
+                // Reset the stuck jump variable just in case
+                _input.jump = false; 
+            }
+            // ==========================================
+            // NORMAL WALKING MODE
+            // ==========================================
+            else 
+            {
+                if (Grounded)
+                {
+                    _fallTimeoutDelta = FallTimeout;
+
+                    if (_verticalVelocity < 0.0f) _verticalVelocity = -2f;
+
+                    if (_input.jump && _jumpTimeoutDelta <= 0.0f)
+                    {
+                        _verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);
+                        if (_animator != null) _animator.SetBool("isJumping", true);
+                    }
+
+                    if (_jumpTimeoutDelta >= 0.0f) _jumpTimeoutDelta -= Time.deltaTime;
+
+                    if (_animator != null && !_input.jump && _animator.GetBool("isJumping"))
+                        _animator.SetBool("isJumping", false);
+                }
+                else
+                {
+                    _jumpTimeoutDelta = JumpTimeout;
+                    if (_verticalVelocity < -1f && _animator != null) _animator.SetBool("isJumping", false);
+                    if (_fallTimeoutDelta >= 0.0f) _fallTimeoutDelta -= Time.deltaTime;
+                    _input.jump = false;
                 }
 
-                // Reset jump timeout
-                if (_jumpTimeoutDelta >= 0.0f)
-                    _jumpTimeoutDelta -= Time.deltaTime;
-
-                // 👇 Turn off jump animation when player lands
-                if (!_input.jump && _animator.GetBool("isJumping"))
-                    _animator.SetBool("isJumping", false);
+                if (_verticalVelocity < _terminalVelocity) _verticalVelocity += Gravity * Time.deltaTime;
             }
-            else
-            {
-                _jumpTimeoutDelta = JumpTimeout;
-
-                // 👇 Optional: turn off jump if falling past a threshold
-                if (_verticalVelocity < -1f)
-                    _animator.SetBool("isJumping", false);
-
-                if (_fallTimeoutDelta >= 0.0f)
-                    _fallTimeoutDelta -= Time.deltaTime;
-
-                _input.jump = false;
-            }
-
-            // apply gravity continuously
-            if (_verticalVelocity < _terminalVelocity)
-                _verticalVelocity += Gravity * Time.deltaTime;
         }
 
-
+        // ... Rest of the script ...
         private void HandleAttack()
         {
             if (_animator == null) return;
-
-            if (Input.GetMouseButtonDown(0))
-                _animator.SetBool("isAttacking", true);
-            else if (Input.GetMouseButtonUp(0))
-                _animator.SetBool("isAttacking", false);
+            if (Input.GetMouseButtonDown(0)) _animator.SetBool("isAttacking", true);
+            else if (Input.GetMouseButtonUp(0)) _animator.SetBool("isAttacking", false);
         }
 
         private static float ClampAngle(float lfAngle, float lfMin, float lfMax)
@@ -231,23 +253,12 @@ namespace StarterAssets
 
         private void OnDrawGizmosSelected()
         {
-            Color transparentGreen = new Color(0.0f, 1.0f, 0.0f, 0.35f);
-            Color transparentRed = new Color(1.0f, 0.0f, 0.0f, 0.35f);
-
-            Gizmos.color = Grounded ? transparentGreen : transparentRed;
+            Gizmos.color = Grounded ? new Color(0,1,0,0.35f) : new Color(1,0,0,0.35f);
             Gizmos.DrawSphere(new Vector3(transform.position.x, transform.position.y - GroundedOffset, transform.position.z), GroundedRadius);
         }
 
-        // Trigger Death animation
-        public void Die()
-        {
-            if (_animator != null)
-            {
-                _animator.SetTrigger("Death");
-            }
-        }
+        public void Die() { if (_animator != null) _animator.SetTrigger("Death"); }
 
-        // Teleport helper
         public void TeleportPlayer(Vector3 newPosition)
         {
             _controller.enabled = false;
