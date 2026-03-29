@@ -4,31 +4,45 @@ public class AsteroidSpawner : MonoBehaviour
 {
     [Header("Setup")]
     public GameObject asteroidPrefab;
-    public Transform playerTransform; // Drag player here, or it auto-finds them
+    public Transform playerTransform; 
+    public int activeLevelID = 4; // Only spawn on Level 4
 
     [Header("Spawn Settings")]
-    public float spawnInterval = 1.0f; // Seconds between rocks
-    public Vector3 spawnAreaSize = new Vector3(50f, 1f, 50f); // Width, Height, Length of spawn box
+    public float spawnInterval = 0.5f; 
+    public Vector3 spawnAreaSize = new Vector3(20f, 1f, 20f); 
 
     [Header("Targeting Logic")]
     [Range(0f, 100f)] 
-    public float accuracyChance = 30f; // 30% chance to aim at player
-    public float shootSpeed = 20f;     // How fast accurate shots fly
+    public float accuracyChance = 50f; 
+    public float shootSpeed = 40f;    
 
     private float timer;
+    private CharacterController playerController; 
 
     private void Start()
     {
-        // Auto-find player if you forgot to drag them in
         if (playerTransform == null)
         {
             GameObject p = GameObject.FindGameObjectWithTag("Player");
             if (p != null) playerTransform = p.transform;
         }
+
+        if (playerTransform != null)
+            playerController = playerTransform.GetComponent<CharacterController>();
     }
 
     private void Update()
     {
+        // --- THE FIX ---
+        // If we are not on Level 4, stop the timer.
+        if (LevelManager.Instance != null)
+        {
+            if (LevelManager.Instance.currentLevelIndex != activeLevelID)
+            {
+                return; 
+            }
+        }
+
         timer += Time.deltaTime;
         if (timer >= spawnInterval)
         {
@@ -39,53 +53,45 @@ public class AsteroidSpawner : MonoBehaviour
 
     void SpawnRock()
     {
-        if (asteroidPrefab == null) return;
+        // (Same logic as before)
+        if (asteroidPrefab == null || playerTransform == null) return;
 
-        // 1. Calculate a random position inside the "Green Box"
         Vector3 randomPos = new Vector3(
             Random.Range(-spawnAreaSize.x / 2, spawnAreaSize.x / 2),
             Random.Range(-spawnAreaSize.y / 2, spawnAreaSize.y / 2),
             Random.Range(-spawnAreaSize.z / 2, spawnAreaSize.z / 2)
         );
-
         Vector3 spawnPoint = transform.position + randomPos;
 
-        // 2. Create the Rock
         GameObject rock = Instantiate(asteroidPrefab, spawnPoint, Random.rotation);
-        
-        // 3. Decide: Shoot at Player OR Just Drop?
-        // Random.value returns 0.0 to 1.0. If accuracyChance is 30, we check against 0.3.
+        Rigidbody rb = rock.GetComponent<Rigidbody>();
+        if (rb == null) return;
+
         bool isAccurateShot = (Random.value * 100f) < accuracyChance;
 
-        if (isAccurateShot && playerTransform != null)
+        if (isAccurateShot)
         {
-            // AIM AT PLAYER
-            Rigidbody rb = rock.GetComponent<Rigidbody>();
-            if (rb != null)
+            Vector3 targetPos = playerTransform.position;
+            if (playerController != null)
             {
-                Vector3 direction = (playerTransform.position - spawnPoint).normalized;
-                rb.linearVelocity = direction * shootSpeed; // Fire!
+                float dist = Vector3.Distance(spawnPoint, playerTransform.position);
+                float travelTime = dist / shootSpeed;
+                targetPos += playerController.velocity * travelTime;
             }
+            Vector3 direction = (targetPos - spawnPoint).normalized;
+            rb.linearVelocity = direction * shootSpeed; 
         }
         else
         {
-            // RANDOM DROP (Optional: Add slight random drift so they don't fall perfectly straight)
-            Rigidbody rb = rock.GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                rb.linearVelocity = new Vector3(Random.Range(-5f, 5f), -5f, Random.Range(-5f, 5f));
-            }
+            rb.linearVelocity = new Vector3(Random.Range(-5f, 5f), -15f, Random.Range(-5f, 5f));
         }
 
-        // 4. Cleanup to prevent lag
-        Destroy(rock, 10f);
+        Destroy(rock, 5f);
     }
 
-    // --- VISUAL AID ---
-    // This draws a GREEN BOX in the Scene View so you can position it easily
     private void OnDrawGizmosSelected()
     {
-        Gizmos.color = new Color(0, 1, 0, 0.5f); // Semi-transparent Green
+        Gizmos.color = new Color(1, 0, 0, 0.3f); 
         Gizmos.DrawCube(transform.position, spawnAreaSize);
     }
 }

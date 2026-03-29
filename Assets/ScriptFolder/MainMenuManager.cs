@@ -19,8 +19,13 @@ public class MainMenuManager : MonoBehaviour
 
         ShowMainButtons();
         
+        // --- THE FIX ---
+        // Old: AudioManager.Instance.CheckMusic(0); 
+        // New: We just ask for the menu music directly.
         if (AudioManager.Instance != null) 
-            AudioManager.Instance.CheckMusic(0);
+        {
+            AudioManager.Instance.PlayMusic(AudioManager.Instance.menuMusic);
+        }
     }
 
     // --- MAIN BUTTONS ---
@@ -62,13 +67,11 @@ public class MainMenuManager : MonoBehaviour
 
     // --- SEPARATE BACK BUTTONS ---
 
-    // Assign this to the Back button in the LEVEL SELECT Panel
     public void OnClick_BackFromLevels()
     {
         ShowMainButtons();
     }
 
-    // Assign this to the Exit/Back button in the CREDITS Panel
     public void OnClick_BackFromCredits()
     {
         ShowMainButtons();

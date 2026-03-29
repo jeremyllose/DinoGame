@@ -17,7 +17,7 @@ public class FinishLineTrigger : MonoBehaviour
             Debug.Log("End of Level Reached!");
             levelFinished = true;
 
-            // 1. Force Open the Panel you dragged in
+            // 1. Force Open the Panel
             if (victoryPanel != null)
             {
                 victoryPanel.SetActive(true);
@@ -27,11 +27,16 @@ public class FinishLineTrigger : MonoBehaviour
                 Debug.LogWarning("You forgot to drag the Victory Panel into the FinishLineTrigger script!");
             }
 
-            // 2. Tell LevelManager to handle the rest (Freezing time, audio, etc.)
+            // 2. Tell LevelManager to freeze time & play sound
             if (LevelManager.Instance != null)
             {
                 LevelManager.Instance.CompleteLevel();
             }
+
+            // 3. --- THE FIX: FORCE UNLOCK CURSOR ---
+            // We must do this manually because LevelManager skips UI logic for Level 4
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
         }
     }
 }

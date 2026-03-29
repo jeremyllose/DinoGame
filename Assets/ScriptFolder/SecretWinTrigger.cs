@@ -34,9 +34,7 @@ public class SecretWinTrigger : MonoBehaviour
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
 
-            // 6. Play Win Sound
-            if (AudioManager.Instance != null)
-                AudioManager.Instance.PlaySFX(AudioManager.Instance.winSound);
+
         }
     }
 }

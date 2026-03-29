@@ -15,13 +15,7 @@ public class ThunderCloud : MonoBehaviour
                 PlayerHealth.Instance.TakeDamage(damage, "Electrocuted by Cloud");
             }
 
-            // 2. Play Sound
-            if (AudioManager.Instance != null)
-            {
-                // Assuming you put a zap sound in 'MeteorImpact' or similar slot
-                // Or just play a generic hit sound
-                AudioManager.Instance.PlaySFX(AudioManager.Instance.loseSound); 
-            }
+
 
             // 3. Optional: Push the player back slightly so they don't get stuck inside
             CharacterController controller = other.GetComponent<CharacterController>();

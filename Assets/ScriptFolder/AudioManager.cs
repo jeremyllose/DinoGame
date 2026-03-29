@@ -5,72 +5,66 @@ public class AudioManager : MonoBehaviour
 {
     public static AudioManager Instance;
 
-    [Header("Music Sources")]
-    public AudioSource musicSource;
-    public AudioClip menuMusic;
-    public AudioClip gameMusic;
+    [Header("Music Source")]
+    public AudioSource musicSource; // Drag the Audio Source component here!
 
-    [Header("SFX Source")]
-    public AudioSource sfxSource;
-
-    [Header("SFX Clips")]
-    public AudioClip walkStep;
-    public AudioClip flyingWind;
-    public AudioClip coinPickup;
-    public AudioClip totemSplash;
-    public AudioClip hoopSuccess;
-    public AudioClip volcanoRumble;
-    public AudioClip meteorImpact;
-    public AudioClip winSound;
-    public AudioClip loseSound;
+    [Header("Music Tracks")]
+    public AudioClip menuMusic;   // Scene 0
+    public AudioClip level1Music; // Level 1
+    public AudioClip level2Music; // Level 2
+    public AudioClip level3Music; // Level 3
+    public AudioClip level4Music; // Level 4
 
     private void Awake()
     {
-        // Singleton Pattern: Ensure only one Audio Manager exists
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject); // Keep this object alive when switching scenes
+            DontDestroyOnLoad(gameObject);
         }
         else
         {
             Destroy(gameObject);
-            return;
         }
     }
 
     private void Start()
     {
-        // Play correct music based on scene
-        CheckMusic(SceneManager.GetActiveScene().buildIndex);
-    }
-
-    // Call this whenever a scene loads
-    public void CheckMusic(int sceneIndex)
-    {
-        if (sceneIndex == 0) // Main Menu
+        // Default check for Main Menu (Scene 0)
+        if (SceneManager.GetActiveScene().buildIndex == 0)
         {
             PlayMusic(menuMusic);
         }
-        else // Game Scene
+    }
+
+    public void PlayLevelMusic(int levelIndex)
+    {
+        switch (levelIndex)
         {
-            PlayMusic(gameMusic);
+            case 1: PlayMusic(level1Music); break;
+            case 2: PlayMusic(level2Music); break;
+            case 3: PlayMusic(level3Music); break;
+            case 4: PlayMusic(level4Music); break;
+            default: PlayMusic(level1Music); break; 
         }
     }
 
     public void PlayMusic(AudioClip clip)
     {
+        if (musicSource == null) return; // Safety Check
+        if (clip == null) return;
+        
         if (musicSource.clip == clip) return; // Don't restart if already playing
 
         musicSource.clip = clip;
         musicSource.Play();
     }
 
+    // --- DUMMY FUNCTION ---
+    // We keep this here so LevelManager doesn't crash, 
+    // but it does nothing (Sound Effects are disabled).
     public void PlaySFX(AudioClip clip, float volume = 1f)
     {
-        if (clip != null)
-        {
-            sfxSource.PlayOneShot(clip, volume);
-        }
+        // Do nothing.
     }
 }

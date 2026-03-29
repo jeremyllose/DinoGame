@@ -2,35 +2,28 @@ using UnityEngine;
 
 public class Collectible : MonoBehaviour
 {
-    private void Start()
-    {
-        // 1. Tell LevelManager "I exist, add me to the total count."
-        if (LevelManager.Instance != null)
-        {
-            LevelManager.Instance.RegisterObjective();
-        }
-        else
-        {
-            Debug.LogWarning("[Collectible] LevelManager not found! Make sure it's in the scene.");
-        }
-    }
+    [Header("Settings")]
+    public int myLevelID = 1; // 1 for Coins, 2 for Totems, 3 for Rings
+
+    // DELETE THE START() FUNCTION
+    // We do NOT want these to register themselves anymore.
+    // The LevelManager already knows we need 15 (or whatever you set manually).
 
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
         {
-            // 2. Tell LevelManager "I was collected."
             if (LevelManager.Instance != null)
             {
-                LevelManager.Instance.CollectObjective();
+                // Only collect if it's the right level
+                if (LevelManager.Instance.currentLevelIndex == myLevelID)
+                {
+                    LevelManager.Instance.CollectObjective();
+                    
+                  
+                    Destroy(gameObject);
+                }
             }
-
-            // 3. Play Sound (Optional, since LevelManager handles coin sound too)
-            // if (AudioManager.Instance != null) 
-            //    AudioManager.Instance.PlaySFX(AudioManager.Instance.coinPickup);
-
-            // 4. Destroy this object
-            Destroy(gameObject);
         }
     }
 }

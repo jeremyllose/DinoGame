@@ -1,14 +1,18 @@
 using UnityEngine;
+using StarterAssets; 
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerFallDamage : MonoBehaviour
 {
+    [Header("Settings")]
+    public int velociraptorLevelID = 1; 
+    
     [Header("Fall Damage Settings")]
-    public float minFallHeight = 5f;   // Start taking damage beyond this
-    public float maxFallHeight = 20f;  // Instant death beyond this
+    public float minFallHeight = 5f;   
+    public float maxFallHeight = 20f;  
+    
     private float fallStartY;
     private bool isFalling = false;
-
     private CharacterController controller;
 
     void Start()
@@ -18,6 +22,15 @@ public class PlayerFallDamage : MonoBehaviour
 
     void Update()
     {
+        if (LevelManager.Instance != null)
+        {
+            if (LevelManager.Instance.currentLevelIndex != velociraptorLevelID)
+            {
+                isFalling = false; 
+                return; 
+            }
+        }
+
         DetectFallStart();
         DetectLanding();
     }
@@ -48,13 +61,16 @@ public class PlayerFallDamage : MonoBehaviour
 
     void ApplyFallDamage(float fallDistance)
     {
+        if (PlayerHealth.Instance == null) return;
         float t = Mathf.InverseLerp(minFallHeight, maxFallHeight, fallDistance);
         float damage = Mathf.Lerp(1, PlayerHealth.Instance.maxHealth, t); 
-        // 1 minimum heart, full health loss if maxFallHeight exceeded
-
-        // ✅ Added cause of death: "fall damage"
         PlayerHealth.Instance.TakeDamage(damage, "fall damage");
+    }
 
-        Debug.Log($"☠️ Fall distance: {fallDistance:F2} | Damage: {damage:F1}");
+    // --- THE NEW FUNCTION ---
+    public void ResetFall()
+    {
+        isFalling = false;
+        fallStartY = transform.position.y; // Reset "safe" height to current position
     }
 }
